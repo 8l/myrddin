@@ -84,21 +84,15 @@ Stab *mkstab()
 Node *getdcl(Stab *st, Node *n)
 {
     Node *s;
-    Stab *orig;
 
-    orig = st;
-    do {
-        if ((s = htget(st->dcl, n))) {
-            /* record that this is in the closure of this scope */
-            if (!st->closure)
-                st->closure = mkht(namehash, nameeq);
-            if (st != orig && !n->decl.isglobl)
-                htput(st->closure, s->decl.name, s);
-            return s;
-        }
-        st = st->super;
-    } while (st);
-    return NULL;
+    s = htget(st->dcl, n);
+    if (!s && st->super) {
+        s = getdcl(st->super, n);
+        /* record that this is in the closure of this scope */
+        if (s && st->closure && !s->decl.isglobl)
+            htput(st->closure, s->decl.name, s);
+    }
+    return s;
 }
 
 Type *gettype(Stab *st, Node *n)
@@ -219,6 +213,11 @@ void putns(Stab *st, Stab *scope)
     if (s)
         fatal(scope->name->line, "Ns %s already defined", namestr(s->name));
     htput(st->ns, namestr(scope->name), scope);
+}
+
+void allowclosure(Stab *st)
+{
+    st->closure = mkht(namehash, nameeq);
 }
 
 /*

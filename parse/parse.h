@@ -313,6 +313,7 @@ int yyparse(void);
 
 /* stab creation */
 Stab *mkstab(void);
+void allowclosure(Stab *st);
 
 void putns(Stab *st, Stab *scope);
 void puttype(Stab *st, Node *n, Type *ty);
