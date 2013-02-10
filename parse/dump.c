@@ -96,6 +96,17 @@ static void outstab(Stab *st, FILE *fd, int depth)
         outstab(getns_str(st, k[i]), fd, depth + 1);
     }
     free(k);
+
+    if (st->closure) {
+        k = htkeys(st->closure, &n);
+        for (i = 0; i < n; i++) {
+            indent(fd, depth + 1);
+            fprintf(fd, "Up ");
+            /* already indented */
+            outsym(getdcl(st, k[i]), fd, 0);
+        }
+        free(k);
+    }
 }
 
 void dumpstab(Stab *st, FILE *fd)

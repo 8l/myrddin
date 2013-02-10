@@ -153,6 +153,7 @@ Node *mkfunc(int line, Node **args, size_t nargs, Type *ret, Node *body)
     f->func.body = body;
     f->func.scope = mkstab();
     f->func.type = mktyfunc(line, args, nargs, ret);
+    allowclosure(f->func.scope);
 
     for (i = 0; i < nargs; i++)
         putdcl(f->func.scope, args[i]);
