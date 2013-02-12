@@ -128,7 +128,7 @@ static Node *addr(Simp *s, Node *a, Type *bt)
 
     n = mkexpr(a->line, Oaddr, a, NULL);
     if (!addressable(s, a))
-            declarelocal(s, a);
+        declarelocal(s, a);
     if (!bt)
         n->expr.type = mktyptr(a->line, a->expr.type);
     else
@@ -557,7 +557,8 @@ static void simpblk(Simp *s, Node *n)
 
 static Node *simplit(Simp *s, Node *lit, Node ***l, size_t *nl)
 {
-    Node *n, *d, *r;
+    Node *n, *d, *r, *f;
+    Node *code;
     char lbl[128];
 
     n = mkname(lit->line, genlblstr(lbl, 128));
@@ -571,8 +572,12 @@ static Node *simplit(Simp *s, Node *lit, Node ***l, size_t *nl)
 
     r->expr.did = d->decl.did;
     r->expr.type = lit->expr.type;
-    if (tybase(r->expr.type)->type == Tyfunc)
-        r = addr(s, r, tybase(r->expr.type));
+    if (tybase(r->expr.type)->type == Tyfunc) {
+        f = temp(s, r);
+        code = set(deref(addr(s, f, tyintptr)), addr(s, r, tyintptr));
+        append(s, code);
+        r = f;
+    }
 
     lappend(l, nl, d);
     return r;
