@@ -561,10 +561,34 @@ static void simpblk(Simp *s, Node *n)
     popstab();
 }
 
+static Node *capture(Simp *s, Node *fn)
+{
+    Htab *cl;
+    void **k;
+    size_t i, nk;
+
+    /* unwrap to the function block */
+    assert(fn->type == Nexpr && exprop(fn) == Olit);
+    fn = fn->expr.args[0];
+    assert(fn->type == Nlit && fn->lit.littype == Lfunc);
+    fn = fn->lit.fnval;
+
+    /* build an env from the closure table */
+    cl = fn->func.scope->closure;
+    if (!cl)
+        return NULL;
+
+    k = htkeys(cl, &nk);
+    for (i = 0; i < nk; i++) {
+        dump(htget(cl, k), stdout);
+    }
+    return NULL;
+}
+
 static Node *simplit(Simp *s, Node *lit, Node ***l, size_t *nl)
 {
     Node *n, *d, *r, *f;
-    Node *code;
+    Node *p, *env;
     char lbl[128];
 
     n = mkname(lit->line, genlblstr(lbl, 128));
@@ -580,8 +604,13 @@ static Node *simplit(Simp *s, Node *lit, Node ***l, size_t *nl)
     r->expr.type = lit->expr.type;
     if (tybase(r->expr.type)->type == Tyfunc) {
         f = temp(s, r);
-        code = set(deref(addr(s, f, tyintptr)), addr(s, r, tyintptr));
-        append(s, code);
+        p = set(deref(addr(s, f, tyintptr)), addr(s, r, tyintptr));
+        append(s, p);
+        env = capture(s, lit);
+        if (env) {
+            p = set(deref(addk(addr(s, f, tyintptr), Ptrsz)), env);
+            append(s, p);
+        }
         r = f;
     }
 
