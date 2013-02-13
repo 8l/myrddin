@@ -585,7 +585,7 @@ static Node *capture(Simp *s, Node *fn)
     return NULL;
 }
 
-static Node *simplit(Simp *s, Node *lit, Node ***l, size_t *nl)
+static Node *simplit(Simp *s, Node *lit)
 {
     Node *n, *d, *r, *f;
     Node *p, *env;
@@ -612,9 +612,10 @@ static Node *simplit(Simp *s, Node *lit, Node ***l, size_t *nl)
             append(s, p);
         }
         r = f;
+        lappend(&file->file.stmts, &file->file.nstmts, d);
+    } else {
+        lappend(&s->blobs, &s->nblobs, d);
     }
-
-    lappend(l, nl, d);
     return r;
 }
 
@@ -1193,10 +1194,10 @@ static Node *rval(Simp *s, Node *n, Node *dst)
                     r = n;
                     break;
                 case Lstr: case Lseq: case Lflt:
-                    r = simplit(s, n, &s->blobs, &s->nblobs);
+                    r = simplit(s, n);
                     break;
                 case Lfunc:
-                    r = simplit(s, n, &file->file.stmts, &file->file.nstmts);
+                    r = simplit(s, n);
                     break;
             }
             break;
