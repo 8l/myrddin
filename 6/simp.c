@@ -594,8 +594,18 @@ static Node *capture(Simp *s, Node *fn)
     env = gentemp(s, fn, envblob, &envdcl);
     declarelocal(s, envdcl);
 
-    /* collect the variables and move them in */
+    /* create a pointer to the start of the blob */
     off = tysize(tyintptr);
+    e = addr(s, env, mktyptr(val->line, val->decl.type));
+    ptr = temp(s, e);
+    e = assign(s, ptr, e);
+    append(s, e);
+
+    /* collect the variables and move them in */
+    val = mkintlit(fn->line, envsz);
+    val->expr.type = tyintptr;
+    e = assign(s, deref(ptr), val);
+    append(s, e);
     for (i = 0; i < nk; i++) {
         /* set up a var node representing the value in the current env */
         dcl = htget(cl, k[i]);
@@ -604,8 +614,7 @@ static Node *capture(Simp *s, Node *fn)
         val->expr.did = dcl->decl.did;
 
         /* copy it over to the blob */
-        ptr = deref(addk(addr(s, env, mktyptr(val->line, val->decl.type)), off));
-        e = assign(s, ptr, val);
+        e = assign(s, deref(addk(ptr, off)), val);
         append(s, e);
         off += align(envsz, size(val));
     }
@@ -613,7 +622,7 @@ static Node *capture(Simp *s, Node *fn)
     return env;
 }
 
-static Node *simplit(Simp *s, Node *lit)
+static Node *simplit(Simp *s, Node *lit, Node *dst)
 {
     Node *n, *d, *r, *f;
     Node *p, *env;
@@ -631,7 +640,10 @@ static Node *simplit(Simp *s, Node *lit)
     r->expr.did = d->decl.did;
     r->expr.type = lit->expr.type;
     if (tybase(r->expr.type)->type == Tyfunc) {
+        if (dst)
+            f = dst;
         f = temp(s, r);
+
         p = set(deref(addr(s, f, tyintptr)), addr(s, r, tyintptr));
         append(s, p);
         env = capture(s, lit);
@@ -1222,10 +1234,10 @@ static Node *rval(Simp *s, Node *n, Node *dst)
                     r = n;
                     break;
                 case Lstr: case Lseq: case Lflt:
-                    r = simplit(s, n);
+                    r = simplit(s, n, NULL);
                     break;
                 case Lfunc:
-                    r = simplit(s, n);
+                    r = simplit(s, n, dst);
                     break;
             }
             break;
