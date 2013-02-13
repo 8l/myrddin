@@ -263,7 +263,7 @@ size_t tysize(Type *t)
         case Tychar:  /* utf32 */
             return 4;
 
-        case Typtr: case Tyfunc:
+        case Typtr:
         case Tyvalist: /* ptr to first element of valist */
             return Ptrsz;
 
@@ -279,6 +279,8 @@ size_t tysize(Type *t)
 
         case Tyslice:
             return 2*Ptrsz; /* len; ptr */
+        case Tyfunc:
+            return 2*Ptrsz; /* code; env */
         case Tyname:
             return tysize(t->sub[0]);
         case Tyarray:
@@ -340,7 +342,6 @@ static Node *temp(Simp *simp, Node *e)
 {
     Node *t, *dcl;
 
-    assert(e->type == Nexpr);
     t = gentemp(simp, e, e->expr.type, &dcl);
     if (stacknode(e))
         declarelocal(simp, dcl);
@@ -561,11 +562,20 @@ static void simpblk(Simp *s, Node *n)
     popstab();
 }
 
+/*
+ * Capture a closure environment. If there is
+ * no closure, return null. Otherwise, generate
+ * a stack-allocated blob of bytes, and copy
+ * all the declarations in
+ */
 static Node *capture(Simp *s, Node *fn)
 {
     Htab *cl;
     void **k;
-    size_t i, nk;
+    size_t i, nk, envsz, off;
+    Type *envblob;      /* a byte blob the size of the environment */
+    Node *ptr, *val, *dcl, *e;
+    Node *env, *envdcl;
 
     /* unwrap to the function block */
     assert(fn->type == Nexpr && exprop(fn) == Olit);
@@ -575,14 +585,38 @@ static Node *capture(Simp *s, Node *fn)
 
     /* build an env from the closure table */
     cl = fn->func.scope->closure;
-    if (!cl)
+    k = htkeys(cl, &nk);
+    if (!nk)
         return NULL;
 
-    k = htkeys(cl, &nk);
+    /* allocate a blob big enough for all the captured variables */
+    envsz = tysize(tyintptr);
     for (i = 0; i < nk; i++) {
-        dump(htget(cl, k), stdout);
+        val = htget(cl, k[i]);
+        envsz = align(envsz, size(val));
+        envsz += size(val);
     }
-    return NULL;
+    envblob = mktyarray(fn->line, mktype(fn->line, Tybyte), mkintlit(fn->line, envsz));
+    env = gentemp(s, fn, envblob, &envdcl);
+    declarelocal(s, envdcl);
+
+    /* collect the variables and move them in */
+    off = tysize(tyintptr);
+    for (i = 0; i < nk; i++) {
+        /* set up a var node representing the value in the current env */
+        dcl = htget(cl, k[i]);
+        val = mkexpr(fn->line, Ovar, val->decl.name, NULL);
+        val->expr.type = dcl->decl.type;
+        val->expr.did = dcl->decl.did;
+
+        /* copy it over to the blob */
+        ptr = deref(addk(addr(s, env, mktyptr(val->line, val->decl.type)), off));
+        e = assign(s, ptr, val);
+        append(s, e);
+        off += align(envsz, size(val));
+    }
+
+    return env;
 }
 
 static Node *simplit(Simp *s, Node *lit)
