@@ -88,6 +88,7 @@ struct Func {
     size_t stksz; /* stack size */
     Type *type;   /* type of function */
     Htab *stkoff; /* Loc* -> int stackoff map */
+    Htab *envoff; /* Loc* -> int stackoff map */
     Node *ret;    /* return value */
     Cfg  *cfg;    /* flow graph */
 };

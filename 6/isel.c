@@ -944,6 +944,7 @@ void genasm(FILE *fd, Func *fn, Htab *globls)
 
     is.reglocs = mkht(varhash, vareq);
     is.stkoff = fn->stkoff;
+    is.envoff = fn->envoff;
     is.globls = globls;
     is.ret = fn->ret;
     is.cfg = fn->cfg;
