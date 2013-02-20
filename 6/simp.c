@@ -44,7 +44,8 @@ struct Simp {
     size_t stksz;
     size_t argsz;
     Htab *globls;
-    Htab *stkoff;
+    Htab *stkoff;       /* decl id => int stkoff */
+    Htab *envoff;       /* decl id => int envoff */
 };
 
 static char *asmname(Node *n);
@@ -1298,7 +1299,7 @@ static void declarelocal(Simp *s, Node *n)
     s->stksz = align(s->stksz, min(size(n), Ptrsz));
     if (debugopt['i']) {
         dump(n, stdout);
-        printf("declared at %zd\n", s->stksz);
+        printf("declared local at %zd\n", s->stksz);
     }
     htput(s->stkoff, n, (void*)s->stksz);
 }
@@ -1310,9 +1311,21 @@ static void declarearg(Simp *s, Node *n)
     htput(s->stkoff, n, (void*)-(s->argsz + 2*Ptrsz));
     if (debugopt['i']) {
         dump(n, stdout);
-        printf("declared at %zd\n", -(s->argsz + 2*Ptrsz));
+        printf("declared arg at %zd\n", -(s->argsz + 2*Ptrsz));
     }
     s->argsz += size(n);
+}
+
+static void declareenv(Simp *s, Node *n)
+{
+    assert(n->type == Ndecl || (n->type == Nexpr && exprop(n) == Ovar));
+    s->stksz += size(n);
+    s->stksz = align(s->stksz, min(size(n), Ptrsz));
+    if (debugopt['i']) {
+        dump(n, stdout);
+        printf("declared env at %zd\n", s->stksz);
+    }
+    htput(s->envoff, n, (void*)s->stksz);
 }
 
 static int islbl(Node *n)
@@ -1376,8 +1389,10 @@ static Node *simp(Simp *s, Node *n)
 static void flatten(Simp *s, Node *f)
 {
     Node *dcl;
+    void **k;
     Type *ty;
-    size_t i;
+    Htab *cl;
+    size_t i, nk;
 
     assert(f->type == Nfunc);
     s->nstmts = 0;
@@ -1397,7 +1412,16 @@ static void flatten(Simp *s, Node *f)
     }
 
     for (i = 0; i < f->func.nargs; i++) {
-      declarearg(s, f->func.args[i]);
+        declarearg(s, f->func.args[i]);
+    }
+
+    cl = f->func.scope->closure;
+    if (cl) {
+        k = htkeys(cl, &nk);
+        for (i = 0; i < nk; i++) {
+            declareenv(s, htget(cl, k[i]));
+        }
+        free(k);
     }
     simp(s, f->func.body);
 
@@ -1450,6 +1474,7 @@ static Func *simpfn(Simp *s, char *name, Node *n, int export)
     fn->isexport = export;
     fn->stksz = align(s->stksz, 8);
     fn->stkoff = s->stkoff;
+    fn->envoff = s->envoff;
     fn->ret = s->ret;
     fn->cfg = cfg;
     return fn;
@@ -1485,6 +1510,7 @@ static void simpdcl(Node *dcl, Htab *globls, Func ***fn, size_t *nfn, Node ***bl
 
     name = asmname(dcl->decl.name);
     s.stkoff = mkht(varhash, vareq);
+    s.envoff = mkht(varhash, vareq);
     s.globls = globls;
     s.blobs = *blob;
     s.nblobs = *nblob;
