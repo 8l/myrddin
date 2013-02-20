@@ -78,15 +78,24 @@ static Mode mode(Node *n)
 
 static Loc *loc(Isel *s, Node *n)
 {
-    ssize_t stkoff;
+    ssize_t off;
     Loc *l, *rip;
     Node *v;
 
     switch (exprop(n)) {
         case Ovar:
+            /*
+             * check the preassigned memory locations.
+             * If we don't have one, put the value in a
+             * register. This implies that all stack
+             * vars will already have locs preassigned.
+             */
             if (hthas(s->stkoff, n)) {
-                stkoff = (ssize_t)htget(s->stkoff, n);
-                l = locmem(-stkoff, locphysreg(Rrbp), NULL, mode(n));
+                off = (ssize_t)htget(s->stkoff, n);
+                l = locmem(-off, locphysreg(Rrbp), NULL, mode(n));
+            } else if (s->envoff && hthas(s->envoff, n)) {
+                off = (ssize_t)htget(s->envoff, n);
+                l = locmem(off, s->envptr, NULL, mode(n));
             } else if (hthas(s->globls, n)) {
                 if (tybase(exprtype(n))->type == Tyfunc)
                     rip = NULL;
@@ -210,7 +219,7 @@ static Loc *inri(Isel *s, Loc *a)
         return inr(s, a);
 }
 
-/* ensures that a location is within a reg or an imm */
+/* ensures that a location is within a reg or mem */
 static Loc *inrm(Isel *s, Loc *a)
 {
     if (a->type == Locreg || a->type == Locmem)
@@ -304,6 +313,8 @@ static int ismergablemul(Node *n, int *r)
     return 1;
 }
 
+/* Load a memory location, possibly flattening a
+ * complex expression. */
 static Loc *memloc(Isel *s, Node *e, Mode m)
 {
     Node **args;
@@ -419,10 +430,11 @@ static Loc *gencall(Isel *s, Node *n)
         argoff += size(n->expr.args[i]);
     }
     fn = selexpr(s, n->expr.args[0]);
-    if (fn->type == Loclbl || fn->type == Locmeml)
+    if (fn->type == Loclbl || fn->type == Locmeml) {
         g(s, Icall, fn, NULL);
-    else
+    } else {
         g(s, Icallind, fn, NULL);
+    }
     if (argsz)
         g(s, Iadd, stkbump, rsp, NULL);
     if (rax)
