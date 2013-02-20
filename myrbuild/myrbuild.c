@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/utsname.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -37,6 +38,8 @@ char **libs;
 size_t nlibs;
 /* the linker script to use */
 char *ldscript;
+
+char *sysname;
 
 regex_t usepat;
 
@@ -124,7 +127,7 @@ void run(char **cmd)
         waitpid(pid, &status, 0);
     }
     if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
-        die("%s: exited with status %d\n", cmd[0], WEXITSTATUS(status));
+        exit(WEXITSTATUS(status));
     else if (WIFSIGNALED(status))
         die("%s: exited with signal %d\n", cmd[0], WTERMSIG(status));
 }
@@ -326,6 +329,14 @@ void linkobj(char **files, size_t nfiles)
         snprintf(buf, sizeof buf, "-l%s", libs[i]);
         lappend(&args, &nargs, strdup(buf));
     }
+
+    /* OSX wants a minimum version specified to prevent warnings*/
+    if (!strcmp(sysname, "Darwin")) {
+        lappend(&args, &nargs, strdup("-macosx_version_min"));
+        lappend(&args, &nargs, strdup("10.6"));
+    }
+
+    /* the null terminator for exec() */
     lappend(&args, &nargs, NULL);
 
     run(args);
@@ -339,7 +350,10 @@ int main(int argc, char **argv)
 {
     int opt;
     int i;
+    struct utsname name;
 
+    if (uname(&name) == 0)
+        sysname = strdup(name.sysname);
     while ((opt = getopt(argc, argv, "hb:l:s:I:C:A:M:L:R:")) != -1) {
         switch (opt) {
             case 'b': binname = optarg; break;

@@ -1,3 +1,4 @@
+use std
 /* tests taking the address of array elements. should exit with 42. */
 const main = {
 	var v : int[3]
@@ -5,6 +6,6 @@ const main = {
 
 	v[1] = 42
 	p = &v[1]
-	-> *p
+	-> p#
 }
 

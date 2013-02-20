@@ -28,7 +28,7 @@ static void constrainwith(Type *t, char *str);
 %token<tok> Terror
 %token<tok> Tplus    /* + */
 %token<tok> Tminus   /* - */
-%token<tok> Tstar    /* * */
+%token<tok> Tmul     /* * */
 %token<tok> Tdiv     /* / */
 %token<tok> Tinc     /* ++ */
 %token<tok> Tdec     /* -- */
@@ -71,7 +71,7 @@ static void constrainwith(Type *t, char *str);
 %token<tok> Tcsqbrac /* ] */
 %token<tok> Tat      /* @ */
 %token<tok> Ttick    /* ` */
-%token<tok> Thash    /* # */
+%token<tok> Tderef   /* # */
 
 %token<tok> Ttype    /* type */
 %token<tok> Tfor     /* for */
@@ -125,7 +125,7 @@ static void constrainwith(Type *t, char *str);
 %type <tylist> typelist typarams
 %type <nodelist> typaramlist
 
-%type <tok> asnop cmpop addop mulop shiftop
+%type <tok> asnop cmpop addop mulop shiftop optident
 
 %type <tydef> tydef typeid
 
@@ -216,11 +216,17 @@ use     : Tuse Tident
             {$$ = mkuse($1->line, $2->str, 1);}
         ;
 
-package : Tpkg Tident Tasn pkgbody Tendblk
+optident: Tident      {$$ = $1;}
+        | /* empty */ {$$ = NULL;}
+        ;
+
+package : Tpkg optident Tasn pkgbody Tendblk
             {if (file->file.exports->name)
                  fatal($1->line, "Package already declared\n");
-             updatens(file->file.exports, $2->str);
-             updatens(file->file.globls, $2->str);
+             if ($2) {
+                 updatens(file->file.exports, $2->str);
+                 updatens(file->file.globls, $2->str);
+             }
             }
         ;
 
@@ -321,7 +327,7 @@ compoundtype
         : functype   {$$ = $1;}
         | type Tosqbrac Tcolon Tcsqbrac {$$ = mktyslice($2->line, $1);}
         | type Tosqbrac expr Tcsqbrac {$$ = mktyarray($2->line, $1, $3);}
-        | type Tstar {$$ = mktyptr($2->line, $1);}
+        | type Tderef {$$ = mktyptr($2->line, $1);}
         | Tat Tident {$$ = mktyparam($1->line, $2->str);}
         | name       {$$ = mktyunres($1->line, $1, NULL, 0);}
         | name Toparen typelist Tcparen {$$ = mktyunres($1->line, $1, $3.types, $3.ntypes);}
@@ -504,7 +510,7 @@ mulexpr : mulexpr mulop shiftexpr
         | shiftexpr
         ;
 
-mulop   : Tstar | Tdiv | Tmod
+mulop   : Tmul | Tdiv | Tmod
         ;
 
 shiftexpr
@@ -518,7 +524,6 @@ shiftop : Tbsl | Tbsr;
 prefixexpr
         : Tinc prefixexpr      {$$ = mkexpr($1->line, Opreinc, $2, NULL);}
         | Tdec prefixexpr      {$$ = mkexpr($1->line, Opredec, $2, NULL);}
-        | Tstar prefixexpr     {$$ = mkexpr($1->line, Oderef, $2, NULL);}
         | Tband prefixexpr     {$$ = mkexpr($1->line, Oaddr, $2, NULL);}
         | Tlnot prefixexpr     {$$ = mkexpr($1->line, Olnot, $2, NULL);}
         | Tbnot prefixexpr     {$$ = mkexpr($1->line, Obnot, $2, NULL);}
@@ -538,6 +543,8 @@ postfixexpr
             {$$ = mkexpr($1->line, Oidx, $1, $3, NULL);}
         | postfixexpr Tosqbrac optexpr Tcolon optexpr Tcsqbrac
             {$$ = mksliceexpr($1->line, $1, $3, $5);}
+        | postfixexpr Tderef
+            {$$ = mkexpr($1->line, Oderef, $1, NULL);}
         | postfixexpr Toparen arglist Tcparen
             {$$ = mkcall($1->line, $1, $3.nl, $3.nn);}
         | atomicexpr
@@ -619,8 +626,6 @@ seqbody : /* empty */ {$$.nl = NULL; $$.nn = 0;}
 
 seqelt  : Tdot Tident Tasn expr
             {die("Unimplemented struct member init");}
-        | Thash atomicexpr Tasn expr
-            {die("Unimplmented array member init");}
         | endlns expr endlns{$$ = $2;}
         ;
 
@@ -770,7 +775,7 @@ static Op binop(int tt)
     switch (tt) {
         case Tplus:     o = Oadd;       break;
         case Tminus:    o = Osub;       break;
-        case Tstar:     o = Omul;       break;
+        case Tmul:      o = Omul;       break;
         case Tdiv:      o = Odiv;       break;
         case Tmod:      o = Omod;       break;
         case Tasn:      o = Oasn;       break;
