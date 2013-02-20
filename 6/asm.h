@@ -120,7 +120,10 @@ struct Isel {
     Htab *spillslots;   /* reg id  => int stkoff */
     Htab *reglocs;      /* decl id => Loc *reg */
     Htab *stkoff;       /* decl id => int stkoff */
+    Htab *envoff;       /* decl id => int envoff */
     Htab *globls;       /* decl id => char *globlname */
+
+    Loc *envptr;        /* saved (spillable) location for the env ptr */
 
     /* increased when we spill */
     Loc *stksz;
