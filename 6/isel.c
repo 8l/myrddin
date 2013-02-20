@@ -790,18 +790,19 @@ Reg savedregs[] = {
 
 static void prologue(Isel *s, size_t sz)
 {
-    Loc *rsp;
-    Loc *rbp;
+    Loc *rsp, *rbp, *rax;
     Loc *stksz;
     size_t i;
 
     rsp = locphysreg(Rrsp);
     rbp = locphysreg(Rrbp);
+    rax = locphysreg(Rrax);
     stksz = loclit(sz, ModeQ);
     /* enter function */
     g(s, Ipush, rbp, NULL);
     g(s, Imov, rsp, rbp, NULL);
     g(s, Isub, stksz, rsp, NULL);
+    g(s, Imov, rax, s->envptr, NULL);
     /* save registers */
     for (i = 0; i < sizeof(savedregs)/sizeof(savedregs[0]); i++) {
         s->calleesave[i] = locreg(ModeQ);
@@ -942,16 +943,20 @@ void genasm(FILE *fd, Func *fn, Htab *globls)
     size_t i, j;
     char buf[128];
 
+    /* ensure that all physical registers have a loc created, so we
+     * don't get any surprises referring to them in the allocator.
+     *
+     * This must be done before we create any other register locs. */
+    for (i = 0; i < Nreg; i++)
+        locphysreg(i);
+
     is.reglocs = mkht(varhash, vareq);
     is.stkoff = fn->stkoff;
     is.envoff = fn->envoff;
+    is.envptr = locreg(ModeQ);
     is.globls = globls;
     is.ret = fn->ret;
     is.cfg = fn->cfg;
-    /* ensure that all physical registers have a loc created, so we
-     * don't get any surprises referring to them in the allocator */
-    for (i = 0; i < Nreg; i++)
-        locphysreg(i);
 
     for (i = 0; i < fn->cfg->nbb; i++)
         lappend(&is.bb, &is.nbb, mkasmbb(fn->cfg->bb[i]));
