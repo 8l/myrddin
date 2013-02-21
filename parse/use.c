@@ -139,6 +139,7 @@ static void wrsym(FILE *fd, Node *val)
     wrbool(fd, val->decl.isconst);
     wrbool(fd, val->decl.isgeneric);
     wrbool(fd, val->decl.isextern);
+    wrbool(fd, val->decl.isglobl);
 
     if (val->decl.isgeneric)
         pickle(val->decl.init, fd);
@@ -158,6 +159,7 @@ static Node *rdsym(FILE *fd)
     n->decl.isconst = rdbool(fd);
     n->decl.isgeneric = rdbool(fd);
     n->decl.isextern = rdbool(fd);
+    n->decl.isglobl = rdbool(fd);
 
 
     if (n->decl.isgeneric)
@@ -394,9 +396,10 @@ static void pickle(Node *n, FILE *fd)
             wrtype(fd, n->decl.type);
 
             /* symflags */
-            wrint(fd, n->decl.isconst);
-            wrint(fd, n->decl.isgeneric);
-            wrint(fd, n->decl.isextern);
+            wrbool(fd, n->decl.isconst);
+            wrbool(fd, n->decl.isgeneric);
+            wrbool(fd, n->decl.isextern);
+            wrbool(fd, n->decl.isglobl);
 
             /* init */
             pickle(n->decl.init, fd);
@@ -518,9 +521,10 @@ static Node *unpickle(FILE *fd)
             rdtype(fd, &n->decl.type);
 
             /* symflags */
-            n->decl.isconst = rdint(fd);
-            n->decl.isgeneric = rdint(fd);
-            n->decl.isextern = rdint(fd);
+            n->decl.isconst = rdbool(fd);
+            n->decl.isgeneric = rdbool(fd);
+            n->decl.isextern = rdbool(fd);
+            n->decl.isglobl = rdbool(fd);
 
             /* init */
             n->decl.init = unpickle(fd);
