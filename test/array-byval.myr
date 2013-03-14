@@ -1,0 +1,14 @@
+use std
+
+const frob = {arr
+	arr[0]++
+	arr[1]++
+	std.put("mod-%i-%i-", arr[0], arr[1])
+}
+
+const main = {
+	var arr = [1,2]
+	frob(arr)
+	std.put("orig-%i-%i\n", arr[0], arr[1])
+}
+
