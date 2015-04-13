@@ -6,12 +6,8 @@ libstd/*.s
 !libstd/*+*.s
 libstd/sys
 libstd/std
-libstd/dial.myr
-libstd/dir.myr
-libstd/env.myr
-libstd/ifreq.myr
-libstd/resolve.myr
-libstd/wait.myr
+libbio/bio
+libregex/regex
 rt/*.s
 !rt/*-*.s
 */*.o
