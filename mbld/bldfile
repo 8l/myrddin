@@ -24,7 +24,7 @@ bin mbld =
 	lib ../libregex:regex
 ;;
 
-gen config.myr {durable} = ./configure ;;
+gen config.myr {durable} = ../configure ;;
 
 man = mbld.1;;
 
