@@ -14,6 +14,11 @@ prefix="/usr/local"
 for arg in $*; do
     shift 1
     case $arg in
+        "--redo" | "-r")
+            if [ -f ./var_cache ]; then
+                . ./var_cache
+            fi
+            ;;
         "--prefix" | "-p") 
             prefix=shift $*
             ;;
@@ -86,7 +91,7 @@ echo ";;" >> mbld/config.myr
 case $MACH in
     *x86_64*)
         echo 'export ARCH=x64' >> config.mk
-        echo 'const Arch = "FreeBSD"' >> mbld/config.myr
+        echo 'const Arch = "x64"' >> mbld/config.myr
         ;;
     *)
         echo ''
@@ -95,6 +100,8 @@ case $MACH in
         echo 'Cannot build'
         echo '********************************'
 esac
+
+echo prefix=$prefix > var_cache
 
 cat << EOF
     Building with:
