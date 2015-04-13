@@ -8,6 +8,7 @@ libstd/sys
 libstd/std
 libbio/bio
 libregex/regex
+mbld/mbld
 rt/*.s
 !rt/*-*.s
 */*.o
@@ -26,3 +27,5 @@ bench/*
 !bench/*.myr
 *~
 tags
+*.swo
+*.swp
