@@ -24,22 +24,6 @@ static int islocal(Node *dcl)
     return 1;
 }
 
-static int nextlbl;
-char *genlocallblstr(char *buf, size_t sz)
-{
-    if (asmsyntax == Plan9)
-        snprintf(buf, 128, ".L%d<>", nextlbl++);
-    else
-        snprintf(buf, 128, ".L%d", nextlbl++);
-    return buf;
-}
-
-char *genlblstr(char *buf, size_t sz)
-{
-    snprintf(buf, 128, ".L%d", nextlbl++);
-    return buf;
-}
-
 /* 
  * For x86, the assembly names are generated as follows:
  *      local symbols: .name

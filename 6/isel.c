@@ -524,6 +524,12 @@ static Loc *gencall(Isel *s, Node *n)
     return ret;
 }
 
+void seljtab(Isel *s, Node *n, Node **args)
+{
+    dump(n, stdout);
+    die("jtab not yet implemented");
+}
+
 Loc *selexpr(Isel *s, Node *n)
 {
     Loc *a, *b, *c, *d, *r;
@@ -711,9 +717,9 @@ Loc *selexpr(Isel *s, Node *n)
         case Ocjmp:
             selcjmp(s, n, args);
             break;
-		case Ojtab:
-			die("jump tables not yet implemented\n");
-			break;
+        case Ojtab:
+            seljtab(s, n, args);
+            break;
         case Olit: /* fall through */
             r = loc(s, n);
             break;

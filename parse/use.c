@@ -484,6 +484,7 @@ static void pickle(FILE *fd, Node *n)
                 case Llbl:      wrstr(fd, n->lit.lblval);       break;
                 case Lbool:     wrbool(fd, n->lit.boolval);     break;
                 case Lfunc:     pickle(fd, n->lit.fnval);       break;
+                case Ljtab:     die("jtab in frontend?");       break;
             }
             break;
         case Nloopstmt:
@@ -608,13 +609,14 @@ static Node *unpickle(FILE *fd)
             rdtype(fd, &n->lit.type);
             n->lit.nelt = rdint(fd);
             switch (n->lit.littype) {
-                case Lchr:      n->lit.chrval = rdint(fd);       break;
-                case Lint:      n->lit.intval = rdint(fd);       break;
-                case Lflt:      n->lit.fltval = rdflt(fd);       break;
-                case Lstr:      rdstrbuf(fd, &n->lit.strval);    break;
-                case Llbl:      n->lit.lblval = rdstr(fd);       break;
-                case Lbool:     n->lit.boolval = rdbool(fd);     break;
-                case Lfunc:     n->lit.fnval = unpickle(fd);     break;
+                case Lchr:      n->lit.chrval = rdint(fd);      break;
+                case Lint:      n->lit.intval = rdint(fd);      break;
+                case Lflt:      n->lit.fltval = rdflt(fd);      break;
+                case Lstr:      rdstrbuf(fd, &n->lit.strval);   break;
+                case Llbl:      n->lit.lblval = rdstr(fd);      break;
+                case Lbool:     n->lit.boolval = rdbool(fd);    break;
+                case Lfunc:     n->lit.fnval = unpickle(fd);    break;
+                case Ljtab:     die("jtab in frontend?");       break;
             }
             break;
         case Nloopstmt:

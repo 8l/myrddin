@@ -23,6 +23,7 @@ typedef struct Tok Tok;
 typedef struct Node Node;
 typedef struct Ucon Ucon;
 typedef struct Stab Stab;
+typedef struct Jtab Jtab;
 
 typedef struct Type Type;
 typedef struct Trait Trait;
@@ -174,6 +175,13 @@ struct Type {
     char isreflect;     /* Tyname: whether this type has reflection info */
 };
 
+struct Jtab {
+    Node **val;
+    size_t nval;
+    Node **dst;
+    size_t ndst;
+};
+
 struct Ucon {
     Srcloc loc;
     size_t id;  /* unique id */
@@ -248,6 +256,7 @@ struct Node {
                 char    *lblval;
                 int      boolval;
                 Node    *fnval;
+                Jtab    *jtab;
             };
         } lit;
 

@@ -38,6 +38,10 @@ struct Reaching {
 /* expression folding */
 Node *fold(Node *n, int foldvar);
 
+/* node creation */
+Node *genlbl(Srcloc loc);
+Node *gentemp(Node *e, Type *ty, Node **dcl);
+
 /* dataflow analysis */
 Reaching *reaching(Cfg *cfg);
 Node *assignee(Node *n);

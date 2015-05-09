@@ -298,7 +298,7 @@ static size_t writelit(FILE *fd, Htab *strtab, Node *v, Type *ty)
            if (hthas(strtab, &v->lit.strval)) {
                lbl = htget(strtab, &v->lit.strval);
            } else {
-               lbl = genlocallblstr(buf, sizeof buf);
+               lbl = genlblstr(buf, sizeof buf);
                htput(strtab, &v->lit.strval, strdup(lbl));
            }
            fprintf(fd, "\t.quad %s\n", lbl);
@@ -306,6 +306,9 @@ static size_t writelit(FILE *fd, Htab *strtab, Node *v, Type *ty)
            break;
         case Lfunc:
             die("Generating this shit ain't ready yet ");
+            break;
+        case Ljtab:
+            die("jtab as data?");
             break;
         case Llbl:
             die("Can't generate literal labels, ffs. They're not data.");

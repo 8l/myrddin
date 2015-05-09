@@ -206,6 +206,13 @@ static void outnode(Node *n, FILE *fd, int depth)
                 case Lflt:      fprintf(fd, " Lflt %lf\n", n->lit.fltval); break;
                 case Lstr:      fprintf(fd, " Lstr %.*s\n", (int)n->lit.strval.len, n->lit.strval.buf); break;
                 case Llbl:      fprintf(fd, " Llbl %s\n", n->lit.lblval); break;
+                case Ljtab:
+                    fprintf(fd, "Ljtab\n");
+                    for (i = 0; i < n->lit.jtab->nval; i++) {
+                        outnode(n->lit.jtab->val[i], fd, depth+1);
+                        outnode(n->lit.jtab->dst[i], fd, depth+1);
+                    }
+                    break;
                 case Lfunc:
                     fprintf(fd, " Lfunc\n");
                     outnode(n->lit.fnval, fd, depth+1);

@@ -177,9 +177,17 @@ static void fixup(Node *n)
             break;
         case Nlit:
             switch (n->lit.littype) {
-                case Lfunc:     fixup(n->lit.fnval);          break;
                 case Lchr: case Lint: case Lflt:
                 case Lstr: case Llbl: case Lbool:
+                    break;
+                case Lfunc:    
+                    fixup(n->lit.fnval);
+                    break;
+                case Ljtab:
+                    for (i = 0; i < n->lit.jtab->nval; i++) {
+                        fixup(n->lit.jtab->val[i]);
+                        fixup(n->lit.jtab->dst[i]);
+                    }
                     break;
             }
             break;
@@ -271,12 +279,13 @@ static Node *specializenode(Node *n, Htab *tsmap)
             r->lit.littype = n->lit.littype;
             r->lit.type = tysubst(n->expr.type, tsmap);
             switch (n->lit.littype) {
-                case Lchr:      r->lit.chrval = n->lit.chrval;       break;
-                case Lint:      r->lit.intval = n->lit.intval;       break;
-                case Lflt:      r->lit.fltval = n->lit.fltval;       break;
-                case Lstr:      r->lit.strval = n->lit.strval;       break;
-                case Llbl:      r->lit.lblval = n->lit.lblval;       break;
-                case Lbool:     r->lit.boolval = n->lit.boolval;     break;
+                case Ljtab:     die("jtab in frontend?");               break;
+                case Lchr:      r->lit.chrval = n->lit.chrval;          break;
+                case Lint:      r->lit.intval = n->lit.intval;          break;
+                case Lflt:      r->lit.fltval = n->lit.fltval;          break;
+                case Lstr:      r->lit.strval = n->lit.strval;          break;
+                case Llbl:      r->lit.lblval = n->lit.lblval;          break;
+                case Lbool:     r->lit.boolval = n->lit.boolval;        break;
                 case Lfunc:     r->lit.fnval = specializenode(n->lit.fnval, tsmap);       break;
             }
             break;

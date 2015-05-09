@@ -98,7 +98,7 @@ static void assemble(char *asmsrc, char *path)
     }
 }
 
-static char *gentemp(char *buf, size_t bufsz, char *path, char *suffix)
+static char *tempfile(char *buf, size_t bufsz, char *path, char *suffix)
 {
     char *tmpdir;
     char *base;
@@ -219,7 +219,7 @@ int main(int argc, char **argv)
             else
                 swapsuffix(buf, sizeof buf, ctx.args[i], ".myr", ".s");
         } else {
-            gentemp(buf, sizeof buf, ctx.args[i], ".s");
+            tempfile(buf, sizeof buf, ctx.args[i], ".s");
         }
         gen(file, buf);
         assemble(buf, ctx.args[i]);

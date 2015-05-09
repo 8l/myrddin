@@ -16,11 +16,12 @@
 typedef struct Dtree Dtree;
 struct Dtree {
     /* If the values are equal, go to 'sub'. If 'val' is null, anything matches. */
+    Node  *load;        /* expression value being compared */
+
     Node *patexpr;      /* the full pattern for this node */
     Node **val;         /* pattern values to compare against */
     size_t nval;
-    Node **load;        /* expression value being compared */
-    size_t nload;
+
     Dtree **sub;        /* submatch to use if if equal */
     size_t nsub;
     Dtree *any;         /* tree for a wildcard match. */
@@ -227,6 +228,11 @@ static Dtree *addpat(Dtree *t, Node *pat, Node *val, Node ***cap, size_t *ncap)
         case Ostruct:
             ret = addstruct(t, pat, val, cap, ncap);
             break;
+        /* FIXME: address patterns.
+         * match ptr
+         * | &123:      if ptr# == 123
+        case Oaddr:
+         **/
         default:
             ret = NULL;
             fatal(pat, "unsupported pattern %s of type %s", opstr[exprop(pat)], tystr(exprtype(pat)));
@@ -298,9 +304,15 @@ static int exhaustivematch(Node *m, Dtree *t, Type *tt)
     return 1;
 }
 
-static Node *genmatch(Dtree *dt)
+static Node *mkjtab(Dtree *dt, Node *load)
 {
     return NULL;
+}
+
+static Node *genmatch(Dtree *dt)
+{
+    dtdump(dt, stdout);
+    return mkjtab(dt, dt->load);
 }
 
 Node *gensimpmatch(Node *m)
@@ -357,6 +369,7 @@ void dtdumpnode(Dtree *dt, FILE *f, int depth, int iswild)
 {
     Node *e;
     size_t i;
+    dump(dt->load, stdout);
     if (dt->patexpr) {
         e = dt->patexpr;
         indentf(depth, "%s%s %s : %s\n", iswild ? "WILDCARD " : "", opstr[exprop(e)], dtnodestr(e), tystr(exprtype(e)));

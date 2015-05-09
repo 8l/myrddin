@@ -295,29 +295,12 @@ static Node *word(Srcloc loc, uint v)
     return n;
 }
 
-static Node *gentemp(Simp *simp, Node *e, Type *ty, Node **dcl)
-{
-    char buf[128];
-    static int nexttmp;
-    Node *t, *r, *n;
-
-    snprintf(buf, 128, ".t%d", nexttmp++);
-    n = mkname(e->loc, buf);
-    t = mkdecl(e->loc, n, ty);
-    r = mkexpr(e->loc, Ovar, n, NULL);
-    r->expr.type = t->decl.type;
-    r->expr.did = t->decl.did;
-    if (dcl)
-        *dcl = t;
-    return r;
-}
-
-static Node *temp(Simp *simp, Node *e)
+Node *temp(Simp *simp, Node *e)
 {
     Node *t, *dcl;
 
     assert(e->type == Nexpr);
-    t = gentemp(simp, e, e->expr.type, &dcl);
+    t = gentemp(e, e->expr.type, &dcl);
     if (stacknode(e))
         declarelocal(simp, dcl);
     return t;
@@ -472,7 +455,7 @@ static void simpiter(Simp *s, Node *n)
     zero->expr.type = tyintptr;
 
     seq = rval(s, n->iterstmt.seq, NULL);
-    idx = gentemp(s, n, tyintptr, &dcl);
+    idx = gentemp(n, tyintptr, &dcl);
     declarelocal(s, dcl);
 
     /* setup */
@@ -1450,6 +1433,9 @@ static Node *rval(Simp *s, Node *n, Node *dst)
                 case Lfunc:
                     r = simpblob(s, n, &file->file.stmts, &file->file.nstmts);
                     break;
+                case Ljtab:
+                    die("jump table as lit");
+                    break;
             }
             break;
         case Ovar:
@@ -1643,11 +1629,11 @@ static void flatten(Simp *s, Node *f)
     ty = f->func.type->sub[0];
     if (stacktype(ty)) {
         s->isbigret = 1;
-        s->ret = gentemp(s, f, mktyptr(f->loc, ty), &dcl);
+        s->ret = gentemp(f, mktyptr(f->loc, ty), &dcl);
         declarearg(s, dcl);
     } else if (ty->type != Tyvoid) {
         s->isbigret = 0;
-        s->ret = gentemp(s, f, ty, &dcl);
+        s->ret = gentemp(f, ty, &dcl);
     }
 
     for (i = 0; i < f->func.nargs; i++) {

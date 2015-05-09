@@ -265,7 +265,7 @@ static size_t writebytes(FILE *fd, char *name, size_t off, char *p, size_t sz)
 static size_t writelit(FILE *fd, char *name, size_t off, Htab *strtab, Node *v, Type *ty)
 {
     char buf[128];
-    char *lbl;
+    char *lbl, *local;
     size_t sz;
     union {
         float fv;
@@ -299,20 +299,26 @@ static size_t writelit(FILE *fd, char *name, size_t off, Htab *strtab, Node *v, 
            if (hthas(strtab, &v->lit.strval)) {
                lbl = htget(strtab, &v->lit.strval);
            } else {
-               lbl = genlocallblstr(buf, sizeof buf);
+               lbl = genlblstr(buf, sizeof buf);
                htput(strtab, &v->lit.strval, strdup(lbl));
            }
+           local = "";
+           if (*name == '.')
+               local = "<>";
            if (v->lit.strval.len > 0)
-               fprintf(fd, "DATA %s+%zd(SB)/8,$%s+0(SB)\n", name, off, lbl);
+               fprintf(fd, "DATA %s%s+%zd(SB)/8,$%s+0(SB)\n", name, local, off, lbl);
            else
-               fprintf(fd, "DATA %s+%zd(SB)/8,$0\n", name, off);
-           fprintf(fd, "DATA %s+%zd(SB)/8,$%zd\n", name, off+8, v->lit.strval.len);
+               fprintf(fd, "DATA %s%s+%zd(SB)/8,$0\n", name, local, off);
+           fprintf(fd, "DATA %s%s+%zd(SB)/8,$%zd\n", name, local, off+8, v->lit.strval.len);
            break;
         case Lfunc:
             die("Generating this shit ain't ready yet ");
             break;
         case Llbl:
             die("Can't generate literal labels, ffs. They're not data.");
+            break;
+        case Ljtab:
+            die("jump table in data section?");
             break;
     }
     return sz;

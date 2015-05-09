@@ -405,6 +405,9 @@ int liteq(Node *a, Node *b)
         case Llbl:
             return !strcmp(a->lit.lblval, b->lit.lblval);
             break;
+        case Ljtab:
+            return 0;
+            break;
     }
     return 0;
 }

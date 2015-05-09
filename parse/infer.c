@@ -528,6 +528,7 @@ static Type *littype(Node *n)
             case Lstr:      t = mktyslice(n->loc, mktype(n->loc, Tybyte));      break;
             case Llbl:      t = mktyptr(n->loc, mktype(n->loc, Tyvoid));        break;
             case Lfunc:     t = n->lit.fnval->func.type;                        break;
+            case Ljtab:     t = mktype(n->loc, Tyvoid);                         break;
         }
         n->lit.type = t;
     }
