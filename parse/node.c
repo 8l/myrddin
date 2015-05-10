@@ -288,6 +288,21 @@ Node *mkfloat(Srcloc loc, double val)
     return n;
 }
 
+Node *mkjtab(Srcloc loc, Node **val, size_t nval, Node **dst, size_t ndst, Node *any)
+{
+    Node *n;
+
+    n = mknode(loc, Nlit);
+    n->lit.littype = Ljtab;
+    n->lit.jtab = malloc(sizeof(Jtab));
+    n->lit.jtab->val = val;
+    n->lit.jtab->nval = nval;
+    n->lit.jtab->dst = dst;
+    n->lit.jtab->ndst = ndst;
+    n->lit.jtab->any = any;
+    return n;
+}
+
 Node *mkidxinit(Srcloc loc, Node *idx, Node *init)
 {
     init->expr.idx = idx;

@@ -263,6 +263,8 @@ Cfg *mkcfg(Node *fn, Node **nl, size_t nn)
         }
     }
     trim(cfg);
+    if (debugopt['c'])
+        dumpcfg(cfg, stdout);
     return cfg;
 }
 

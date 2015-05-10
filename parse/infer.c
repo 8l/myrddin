@@ -1458,7 +1458,7 @@ static void inferexpr(Inferstate *st, Node **np, Type *ret, int *sawret)
             n->expr.type = mktype(n->loc, Tyvoid);
             break;
         case Obad: case Ocjmp: case Ojtab: case Oset:
-        case Oslbase: case Osllen: case Outag:
+        case Oslbase: case Osllen: case Outag: case Otupget:
         case Oblit: case  Oclear: case Oudata:
         case Otrunc: case Oswiden: case Ozwiden:
         case Oint2flt: case Oflt2int: case Oflt2flt:

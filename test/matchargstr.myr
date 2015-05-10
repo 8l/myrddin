@@ -11,6 +11,7 @@ const main = {
 	var v
 
 	v = `Str "asdf"
+
 	match v
 	| `Int 127:	std.fatal(1, "wrong match `Int 127\n")
 	| `Str "foo":	std.fatal(1, "Wrong match `Str \"foo\"\n")

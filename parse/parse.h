@@ -180,6 +180,7 @@ struct Jtab {
     size_t nval;
     Node **dst;
     size_t ndst;
+    Node *any;
 };
 
 struct Ucon {
@@ -553,6 +554,7 @@ Node *mkint(Srcloc l, uint64_t val);
 Node *mkchar(Srcloc l, uint32_t val);
 Node *mkstr(Srcloc l, Str str);
 Node *mkfloat(Srcloc l, double flt);
+Node *mkjtab(Srcloc loc, Node **val, size_t nval, Node **dst, size_t ndst, Node *dfl);
 Node *mkfunc(Srcloc l, Node **args, size_t nargs, Type *ret, Node *body);
 Node *mkname(Srcloc l, char *name);
 Node *mknsname(Srcloc l, char *ns, char *name);

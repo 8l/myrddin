@@ -66,6 +66,7 @@ O(Osllen,	1,	OTpre,  "SLLEN")        /* size of slice */
 O(Oslbase,	1,	OTpre,  "SLBASE")       /* base of sice */
 O(Outag,	1,	OTpre,  "UTAG")	        /* tag of union */
 O(Oudata,	1,	OTpre,  "UDATA")        /* pointer to contents of union */
+O(Otupget,      1,      OTpre,  "TUPGET")       /* load the ith element from a tuple */
 O(Oblit,	1,	OTbin,  "BLIT")         /* blit memory */
 O(Oclear,       1,      OTpre,  "CLEAR")        /* zero */
 

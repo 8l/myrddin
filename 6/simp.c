@@ -226,7 +226,7 @@ static Node *addr(Simp *s, Node *a, Type *bt)
 
     n = mkexpr(a->loc, Oaddr, a, NULL);
     if (!addressable(s, a))
-            forcelocal(s, a);
+       forcelocal(s, a);
     if (!bt)
         n->expr.type = mktyptr(a->loc, a->expr.type);
     else
@@ -330,6 +330,7 @@ static Node *seqlen(Simp *s, Node *n, Type *ty)
 {
     Node *t, *r;
 
+    n = lval(s, n);
     if (exprtype(n)->type == Tyslice) {
         t = slicelen(s, n);
         r = simpcast(s, t, ty);
@@ -627,15 +628,65 @@ static void matchpattern(Simp *s, Node *pat, Node *val, Type *t, Node *iftrue, N
     }
 }
 
+static void simpjtab(Simp *s, Node *j, Node *end)
+{
+    Node *v, *cmp, *t, *any, *eq, *next;
+    Node **val, **dst, **dstlbl;
+    size_t i, nval, ndst, ndstlbl;
+
+    v = rval(s, j->expr.args[0], NULL);        /* value we're jumping on */
+    t = j->expr.args[1];
+    assert(exprop(t) == Olit);
+    t = t->expr.args[0];
+
+    val = t->lit.jtab->val;
+    nval = t->lit.jtab->nval;
+    dst = t->lit.jtab->dst;
+    ndst = t->lit.jtab->ndst;
+    any = t->lit.jtab->any;
+
+    dstlbl = NULL;
+    ndstlbl = 0;
+
+    /* good enough for small jump tables */
+    for (i = 0; i < nval; i++) {
+        cmp = rval(s, val[i], NULL);
+        next = genlbl(cmp->loc);
+        lappend(&dstlbl, &ndstlbl, genlbl(cmp->loc));
+        eq = mkexpr(cmp->loc, Oeq, cmp, v, NULL);
+        eq->expr.type = mktype(cmp->loc, Tybool);
+        cjmp(s, eq, dstlbl[i], next);
+        append(s, next);
+    }
+    if (any) {
+        lappend(&dstlbl, &ndstlbl, genlbl(any->loc));
+        jmp(s, dstlbl[ndstlbl - 1]);
+    }
+
+    append(s, mkexpr(j->loc, Odead, NULL));
+    for (i = 0; i < ndst; i++) {
+        append(s, dstlbl[i]);
+        simp(s, dst[i]);
+        jmp(s, end);
+    }
+    if (any) {
+        append(s, dstlbl[ndstlbl -1]);
+        simp(s, any);
+        jmp(s, end);
+    }
+}
+
 static void simpmatch(Simp *s, Node *n)
 {
-    Node *end, *cur, *next; /* labels */
-    Node *val, *tmp;
-    Node *m;
-    size_t i;
+    Node *end, *jtab;//, *next; /* labels */
+    //Node *val, *tmp;
+    //Node *m;
+    //size_t i;
 
-    gensimpmatch(n);
     end = genlbl(n->loc);
+    jtab = gensimpmatch(n);
+    simpjtab(s, jtab, end);
+#if 0
     val = temp(s, n->matchstmt.val);
     tmp = rval(s, n->matchstmt.val, val);
     if (val != tmp)
@@ -654,7 +705,7 @@ static void simpmatch(Simp *s, Node *n)
         jmp(s, end);
         append(s, next);
     }
-    append(s, mkexpr(n->loc, Odead, NULL));
+#endif
     append(s, end);
 }
 
@@ -813,6 +864,7 @@ static Node *lval(Simp *s, Node *n)
         case Ostruct:   r = rval(s, n, NULL); break;
         case Oucon:     r = rval(s, n, NULL); break;
         case Oarr:      r = rval(s, n, NULL); break;
+        case Oudata:    r = rval(s, n, NULL); break;
         default:
             fatal(n, "%s cannot be an lvalue", opstr[exprop(n)]);
             break;
@@ -1146,10 +1198,39 @@ static Node *simpucon(Simp *s, Node *n, Node *dst)
     return tmp;
 }
 
-static Node *simpuget(Simp *s, Node *n, Node *dst)
+static Node *simpudata(Simp *s, Node *n, Node *dst)
 {
-    die("No uget simplification yet");
-	return NULL;
+    Node *u, *p, *d;
+
+    u = rval(s, n->expr.args[0], NULL);
+    p = addk(addr(s, u, exprtype(n)), Wordsz);
+    if (!dst)
+        dst = temp(s, n);
+    d = assign(s, dst, deref(p, exprtype(dst)));
+    append(s, d);
+    return dst;
+}
+
+static Node *simptupget(Simp *s, Node *n, Node *dst)
+{
+    Node *t, *p, *o;
+    size_t i, idx, off;
+    Type *ty;
+
+    off = 0;
+    t = rval(s, n->expr.args[0], dst);
+    o = n->expr.args[1];        /* Olit idx */
+    o = o->expr.args[0];        /* Nlit idx */
+    idx = o->lit.intval;        /* idx value */
+
+    ty = tybase(exprtype(t));
+    for (i = 0; i < idx; i++) {
+        off = alignto(off, ty->sub[i]);
+        off += tysize(ty->sub[i]);
+    }
+
+    p = addk(addr(s, t, exprtype(t)), off);
+    return deref(p, exprtype(n));
 }
 
 /* simplifies 
@@ -1293,6 +1374,7 @@ static Node *rval(Simp *s, Node *n, Node *dst)
     Node **args;
     size_t i;
     Type *ty;
+
     const Op fusedmap[Numops] = {
         [Oaddeq]        = Oadd,
         [Osubeq]        = Osub,
@@ -1337,14 +1419,21 @@ static Node *rval(Simp *s, Node *n, Node *dst)
             r = simpucon(s, n, dst);
             break;
         case Outag:
-            die("union tags not yet supported\n");
+            ty = mktype(n->loc, Tyuint32);
+            t = rval(s, args[0], NULL);
+            r = deref(addr(s, t, mktyptr(n->loc, ty)), ty);
             break;
         case Oudata:
-            r = simpuget(s, n, dst);
+            r = simpudata(s, n, dst);
             break;
         case Otup:
             r = simptup(s, n, dst);
             break;
+        case Otupget:
+            r = simptupget(s, n, dst);
+            break;
+        case Osllen:
+            r = seqlen(s, args[0], exprtype(n));
         case Oarr:
             if (!dst)
                 dst = temp(s, n);
@@ -1521,6 +1610,11 @@ static Node *rval(Simp *s, Node *n, Node *dst)
             break;
         case Ogt: case Oge: case Olt: case Ole:
             r = compare(s, n, 0);
+            break;
+        case Ojtab:
+            t = genlbl(n->loc);
+            simpjtab(s, n, t);
+            append(s, t);
             break;
         case Obad:
             die("bad operator");
